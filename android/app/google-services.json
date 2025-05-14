@@ -1,0 +1,90 @@
+{
+  "project_info": {
+    "project_number": "500759118187",
+    "project_id": "circulahealth",
+    "storage_bucket": "circulahealth.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:500759118187:android:172acbea0a606810238c2e",
+        "android_client_info": {
+          "package_name": "com.circula.circulahealth"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "500759118187-5vaknel51ii3oasbmkabso8frqva7kao.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtczCJczLl15SIYgUuO91VHbeVTvFxzTA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "500759118187-5vaknel51ii3oasbmkabso8frqva7kao.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "500759118187-otskgk0s390ivuf1li2sj89oegbcffas.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.circulahealth"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:500759118187:android:cacaba901503cf41238c2e",
+        "android_client_info": {
+          "package_name": "com.example.circulahealth"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "500759118187-rpbai7hb1i0ptnecbj5aj4v826uvtahv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.circulahealth",
+            "certificate_hash": "b276da7da4682916b8901a71446ed13b323e62d6"
+          }
+        },
+        {
+          "client_id": "500759118187-5vaknel51ii3oasbmkabso8frqva7kao.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtczCJczLl15SIYgUuO91VHbeVTvFxzTA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "500759118187-5vaknel51ii3oasbmkabso8frqva7kao.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "500759118187-otskgk0s390ivuf1li2sj89oegbcffas.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.circulahealth"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

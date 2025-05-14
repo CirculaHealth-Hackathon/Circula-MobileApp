@@ -1,0 +1,2 @@
+/Users/stanly_s/Documents/CirculaHealth/android/app/.cxx/Debug/1u66563h/x86/CMakeFiles/edit_cache.dir
+/Users/stanly_s/Documents/CirculaHealth/android/app/.cxx/Debug/1u66563h/x86/CMakeFiles/rebuild_cache.dir
