@@ -6,6 +6,7 @@ import 'package:circulahealth/components/community.dart';
 import 'package:circulahealth/components/donor.dart';
 import 'package:circulahealth/components/settings.dart';
 import 'package:circulahealth/components/loading_component.dart';
+import 'package:circulahealth/confirm_page.dart';
 import 'package:circulahealth/providers/main_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -219,7 +220,7 @@ class _MapPageState extends State<MapPage> {
     Community(),
     const Center(child: Text('AI Help Page')),
     ChatApp(),
-    Settings(),
+    Settings()
   ];
 
   void _setDestinationMarker(LatLng position) {
@@ -451,18 +452,13 @@ class _MapPageState extends State<MapPage> {
                                                 itemBuilder: (context, index) {
                                                   return InkWell(
                                                     onTap: () async {
-                                                      setState(() {
-                                                        isLoading = true;
-                                                        theDestination = LatLng(
-                                                            theDestination
-                                                                    .latitude -
-                                                                0.05,
-                                                            theDestination
-                                                                    .longitude -
-                                                                0.05);
-                                                        _showRouteToDestination();
-                                                        pageState = "";
-                                                      });
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (context) =>
+                                                              const ConfirmPage(),
+                                                        ),
+                                                      );
                                                     },
                                                     child: const Padding(
                                                       padding: EdgeInsets.only(
@@ -568,6 +564,8 @@ class _MapPageState extends State<MapPage> {
                                                                   FontWeight
                                                                       .bold,
                                                               fontSize: 16,
+                                                              color:
+                                                                  Colors.white,
                                                             ),
                                                           ),
                                                         ],
@@ -576,8 +574,8 @@ class _MapPageState extends State<MapPage> {
                                                     Positioned(
                                                       bottom: 0,
                                                       right: 0,
-                                                      child: SvgPicture.asset(
-                                                        'assets/images/blood-bg.svg',
+                                                      child: Image.asset(
+                                                        'assets/images/donor-bg.png',
                                                         fit: BoxFit.contain,
                                                       ),
                                                     ),
@@ -617,14 +615,15 @@ class _MapPageState extends State<MapPage> {
                                                           fontWeight:
                                                               FontWeight.bold,
                                                           fontSize: 16,
+                                                          color: Colors.white,
                                                         ),
                                                       ),
                                                     ),
                                                     Positioned(
                                                       bottom: 0,
                                                       right: 0,
-                                                      child: SvgPicture.asset(
-                                                        'assets/images/donor-bg.svg',
+                                                      child: Image.asset(
+                                                        'assets/images/blood-bg.png',
                                                         fit: BoxFit.contain,
                                                       ),
                                                     ),
