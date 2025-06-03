@@ -1,11 +1,7 @@
-import 'dart:io';
-
 import 'package:circulahealth/api/dio.dart';
 import 'package:circulahealth/models/user.dart';
 import 'package:circulahealth/providers/main_provider.dart';
-import 'package:dio/io.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:path/path.dart';
 import "package:dio/dio.dart";
 
 Future<dynamic> signInWithGoogle(MainProvider mainProvider) async {
