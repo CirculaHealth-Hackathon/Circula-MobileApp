@@ -6,28 +6,18 @@ import 'package:circulahealth/map_page.dart';
 import 'package:circulahealth/providers/main_provider.dart';
 import 'package:circulahealth/sign_in.dart';
 import 'package:circulahealth/sign_up.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
-import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   LocationPermission permission = await Geolocator.checkPermission();
   if (permission != LocationPermission.always &&
       permission != LocationPermission.whileInUse) {
     Geolocator.requestPermission();
   }
-  await FirebaseAppCheck.instance.activate(
-    androidProvider: AndroidProvider.debug,
-    appleProvider: AppleProvider.appAttest,
-  );
   runApp(const MyApp());
 }
 

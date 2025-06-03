@@ -1,7 +1,8 @@
 import 'package:circulahealth/api/chat_service.dart';
+import 'package:circulahealth/api/google_sign_in.dart';
 import 'package:circulahealth/api/joke_service.dart';
+import 'package:circulahealth/models/user.dart';
 import 'package:circulahealth/providers/main_provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -31,15 +32,15 @@ class ChatMessage {
 }
 
 class TheMessage {
-  final String text;
-  final String sender;
-  final String receiver;
+  final String message;
+  final String senderEmail;
+  final String receiverEmail;
   final String avatarUrl;
 
   TheMessage(
-      {required this.text,
-      required this.sender,
-      required this.receiver,
+      {required this.message,
+      required this.senderEmail,
+      required this.receiverEmail,
       required this.avatarUrl});
 }
 
@@ -52,20 +53,42 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isLoading = false;
   final ScrollController _scrollController = ScrollController();
 
-  List<TheMessage> chatMessages = [];
+  List<dynamic> chatMessages = [];
 
   final TextEditingController _controller = TextEditingController();
   bool _botTyping = false;
   late ChatService chatService;
   JokeService jokeService = new JokeService();
+  late MainProvider _mainProvider;
+  UserDetails? userData;
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    chatService = ChatService();
-    chatService.connect("habebo@gmail.com");
-    chatMessages = [];
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _mainProvider = Provider.of<MainProvider>(context, listen: false);
+      setState(() {
+        _mainProvider.setIsLoading(true);
+      });
+      var user = await getUserDetails(_mainProvider.userCredential);
+      userData = user;
+      var currentChatMessages =
+          await getChatMessages(_mainProvider.userCredential);
+      setState(() {
+        chatMessages = currentChatMessages;
+        _mainProvider.setIsLoading(false);
+        Future.delayed(Duration(milliseconds: 150), () {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: Duration(milliseconds: 300),
+              curve: Curves.easeIn,
+            );
+          }
+        });
+      });
+    });
   }
 
   void scrollToBottom() {
@@ -84,16 +107,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _controller.text.trim();
     if (text.isNotEmpty) {
       _controller.clear();
-      await FirebaseFirestore.instance
-          .collection('chats')
-          .doc("${userId}_bot")
-          .collection('messages')
-          .add({
-        'senderId': userId,
-        'text': text,
-        'timestamp': FieldValue.serverTimestamp(),
-        'receiverId': "bot"
-      });
       _controller.clear();
     }
     setState(() {
@@ -112,19 +125,18 @@ class _ChatScreenState extends State<ChatScreen> {
   //   });
   // }
 
-  Widget _buildMessageBubble(
-      var message, String userId, String senderId, String photoUrl) {
+  Widget _buildMessageBubble(var message, String userId, String senderId) {
     final isMe = userId == senderId;
     return Row(
       mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
       children: [
-        // if (!isMe) ...[
-        //   CircleAvatar(
-        //     backgroundImage: NetworkImage(photoUrl),
-        //     radius: 16,
-        //   ),
-        //   const SizedBox(width: 6),
-        // ],
+        if (!isMe) ...[
+          const CircleAvatar(
+            backgroundImage: NetworkImage(""),
+            radius: 16,
+          ),
+          const SizedBox(width: 6),
+        ],
         CustomPaint(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -145,7 +157,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (isMe) ...[
           const SizedBox(width: 6),
           CircleAvatar(
-            backgroundImage: NetworkImage(photoUrl),
+            backgroundImage: NetworkImage(userData?.photoUrl ?? ""),
             radius: 16,
           ),
         ],
@@ -173,10 +185,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 itemCount: chatMessages.length,
                 itemBuilder: (context, index) {
                   return _buildMessageBubble(
-                      chatMessages[index].text,
-                      chatMessages[index].sender,
-                      chatMessages[index].receiver,
-                      chatMessages[index].avatarUrl);
+                      chatMessages[index].message,
+                      chatMessages[index].senderEmail,
+                      chatMessages[index].receiverEmail);
                 },
               ),
             ),
@@ -212,9 +223,6 @@ class _ChatScreenState extends State<ChatScreen> {
                                 if (_isLoading) {
                                   return;
                                 }
-                                await _sendMessage(
-                                    mainProvider.userCredential.user?.uid ??
-                                        "");
                               },
                             ),
                           ),
@@ -241,28 +249,37 @@ class _ChatScreenState extends State<ChatScreen> {
                       if (_isLoading) {
                         return;
                       }
+                      var userMessage = _controller.text.trim();
                       setState(() {
                         var theMessage = TheMessage(
-                            text: _controller.text.trim(),
-                            sender: "stanlyskwok1@gmail.com",
-                            receiver: "stanlyskwok1@gmail.com",
+                            message: _controller.text.trim(),
+                            senderEmail: mainProvider.userCredential,
+                            receiverEmail: mainProvider.userCredential,
                             avatarUrl: "");
                         chatMessages.add(theMessage);
                         WidgetsBinding.instance
                             .addPostFrameCallback((_) => scrollToBottom());
                         _controller.text = "";
                       });
+
+                      await addMessage(mainProvider.userCredential,
+                          mainProvider.userCredential, userMessage);
+                      _controller.text = "";
                       var joke = await jokeService.getRandomJoke();
                       setState(() {
                         var theMessage = TheMessage(
-                            text: "${joke.setup}\n😂\n${joke.punchline}",
-                            sender: "chatbot@gmail.com",
-                            receiver: "stanlyskwok1@gmail.com",
+                            message: "${joke.setup}\n😂\n${joke.punchline}",
+                            senderEmail: "chatbot@gmail.com",
+                            receiverEmail: mainProvider.userCredential,
                             avatarUrl: "");
                         chatMessages.add(theMessage);
                         WidgetsBinding.instance
                             .addPostFrameCallback((_) => scrollToBottom());
                       });
+                      await addMessage(
+                          "chatbot@gmail.com",
+                          mainProvider.userCredential,
+                          "${joke.setup}\n😂\n${joke.punchline}");
                     },
                     child: const Icon(Icons.send),
                   ),

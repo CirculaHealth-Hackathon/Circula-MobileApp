@@ -1,10 +1,10 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:circulahealth/api/dio.dart';
+import 'package:circulahealth/api/google_sign_in.dart';
 import 'package:circulahealth/components/animated_button.dart';
 import 'package:circulahealth/providers/main_provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 
 class Community extends StatefulWidget {
   const Community({super.key});
@@ -15,6 +15,31 @@ class Community extends StatefulWidget {
 
 class _CommunityState extends State<Community> {
   TextEditingController _onYourMindController = new TextEditingController();
+  late MainProvider _mainProvider;
+  var posts = [];
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        _mainProvider = Provider.of<MainProvider>(context, listen: false);
+        setState(() {
+          _mainProvider.setIsLoading(true);
+        });
+        posts = await getPosts();
+        setState(() {
+          _mainProvider.setIsLoading(false);
+        });
+      } catch (e) {
+        print(e);
+        setState(() {
+          _mainProvider.setIsLoading(false);
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<MainProvider>(builder: (context, mainProvider, child) {
@@ -103,38 +128,27 @@ class _CommunityState extends State<Community> {
                           setState(() {
                             mainProvider.setIsLoading(true);
                           });
-                          final firestore = FirebaseFirestore.instance;
-
-                          // Get the user info from "users" collection
-                          final userSnapshot = await firestore
-                              .collection('users')
-                              .doc(mainProvider.userCredential.user?.uid)
-                              .get();
-                          if (userSnapshot.exists) {
-                            final userData = userSnapshot.data();
-                            final postData = {
-                              'userId': mainProvider.userCredential.user?.uid,
-                              'userName': userData?['username'],
-                              'userProfilePicture': userData?['photoUrl'],
-                              'userFullName': userData?['fullName'] ?? "",
-                              'description': _onYourMindController.text,
-                              'timestamp': DateTime.now().toUtc(),
-                              'likers': [],
-                              'comments': []
-                            };
-                            await firestore.collection('posts').add(postData);
-                            AwesomeDialog(
-                              context: context,
-                              dialogType: DialogType.success,
-                              animType: AnimType.scale,
-                              title: 'Success!',
-                              desc: 'Successfully posted!',
-                              btnOkOnPress: () {},
-                              btnOkColor: Colors.green,
-                              headerAnimationLoop: false,
-                            ).show();
-                            _onYourMindController.text = "";
-                          }
+                          final body = {
+                            'email': mainProvider.userCredential,
+                            'text': _onYourMindController.text,
+                          };
+                          var dio = setupDio();
+                          var response = await dio.post(
+                            "https://circula-nestjs-production.up.railway.app/users/add-post",
+                            data: body,
+                          );
+                          posts = await getPosts();
+                          AwesomeDialog(
+                            context: context,
+                            dialogType: DialogType.success,
+                            animType: AnimType.scale,
+                            title: 'Success!',
+                            desc: 'Successfully posted!',
+                            btnOkOnPress: () {},
+                            btnOkColor: Colors.green,
+                            headerAnimationLoop: false,
+                          ).show();
+                          _onYourMindController.text = "";
                           setState(() {
                             mainProvider.setIsLoading(false);
                           });
@@ -150,166 +164,143 @@ class _CommunityState extends State<Community> {
               Expanded(
                 child: Container(
                   width: double.infinity,
-                  child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('posts')
-                          .orderBy('timestamp', descending: true)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasError) {
-                          return Text('Error: ${snapshot.error}');
-                        }
+                  child: ListView.builder(
+                    scrollDirection: Axis.vertical,
+                    itemCount: posts.length,
+                    itemBuilder: (context, index) {
+                      final post = posts[index];
 
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                              child: CircularProgressIndicator());
-                        }
-
-                        final posts = snapshot.data?.docs;
-                        return ListView.builder(
-                          scrollDirection: Axis.vertical,
-                          itemCount: posts?.length,
-                          itemBuilder: (context, index) {
-                            final post =
-                                posts?[index].data() as Map<String, dynamic>;
-
-                            final DateTime? timestamp =
-                                (post['timestamp'] as Timestamp?)?.toDate();
-                            final timeAgo = timestamp != null
-                                ? _formatTimeAgo(timestamp)
-                                : 'Unknown time';
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 20.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          border: Border.all(
-                                            color: Colors.grey,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            50.0,
-                                          ),
-                                        ),
-                                        child: post['userProfilePicture'] !=
-                                                null
-                                            ? ClipOval(
-                                                child: Image.network(
-                                                  post['userProfilePicture'],
-                                                  width: 50,
-                                                  height: 50,
-                                                  fit: BoxFit.cover,
-                                                  loadingBuilder: (context,
-                                                      child, loadingProgress) {
-                                                    if (loadingProgress ==
-                                                        null) {
-                                                      return child;
-                                                    }
-                                                    return Container(
-                                                      width: 50,
-                                                      height: 50,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.white,
-                                                        border: Border.all(
-                                                          color: Colors.grey,
-                                                        ),
-                                                      ),
-                                                      child: const Center(
-                                                          child:
-                                                              CircularProgressIndicator()),
-                                                    );
-                                                  },
-                                                  errorBuilder: (context, error,
-                                                      stackTrace) {
-                                                    return const SizedBox(
-                                                      width: 50,
-                                                      height: 50,
-                                                      child: Center(
-                                                          child: Icon(
-                                                              Icons.person,
-                                                              size: 35)),
-                                                    );
-                                                  },
+                      final timeAgo = post?.createdAt != null
+                          ? _formatTimeAgo(post?.createdAt)
+                          : 'Unknown time';
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 20.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    border: Border.all(
+                                      color: Colors.grey,
+                                    ),
+                                    borderRadius: BorderRadius.circular(
+                                      50.0,
+                                    ),
+                                  ),
+                                  child: post?.user?.photoUrl != "" &&
+                                          post?.user?.photoUrl != null
+                                      ? ClipOval(
+                                          child: Image.network(
+                                            post?.user?.photoUrl ?? "",
+                                            width: 50,
+                                            height: 50,
+                                            fit: BoxFit.cover,
+                                            loadingBuilder: (context, child,
+                                                loadingProgress) {
+                                              if (loadingProgress == null) {
+                                                return child;
+                                              }
+                                              return Container(
+                                                width: 50,
+                                                height: 50,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  border: Border.all(
+                                                    color: Colors.grey,
+                                                  ),
                                                 ),
-                                              )
-                                            : const Icon(Icons.person,
-                                                size: 50),
-                                      ),
-                                      const SizedBox(width: 10.0),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            post["userName"] != ""
-                                                ? post["userName"] != ""
-                                                    ? post["userName"]
-                                                    : "Anonymous"
-                                                : post["userFullName"] != ""
-                                                    ? post["userFullName"]
-                                                    : "Anonymous",
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                            ),
+                                                child: const Center(
+                                                    child:
+                                                        CircularProgressIndicator()),
+                                              );
+                                            },
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                              return const SizedBox(
+                                                width: 50,
+                                                height: 50,
+                                                child: Center(
+                                                    child: Icon(Icons.person,
+                                                        size: 35)),
+                                              );
+                                            },
                                           ),
-                                          Text(
-                                            timeAgo,
-                                            style: const TextStyle(
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                        ],
+                                        )
+                                      : const Icon(Icons.person, size: 50),
+                                ),
+                                const SizedBox(width: 10.0),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      post?.user?.username != "" &&
+                                              post?.user?.username != null
+                                          ? post?.user?.username != "" &&
+                                                  post?.user?.username != null
+                                              ? post?.user?.username
+                                              : post?.email
+                                          : post?.user?.fullName != "" &&
+                                                  post?.user?.fullName != null
+                                              ? post?.user?.fullName
+                                              : post?.email,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                    ],
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 8.0,
                                     ),
-                                    child: Text(
-                                      post["description"] ?? "",
-                                    ),
-                                  ),
-                                  const Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.thumb_up_alt_outlined,
+                                    Text(
+                                      timeAgo,
+                                      style: const TextStyle(
                                         color: Colors.grey,
                                       ),
-                                      SizedBox(width: 7.5),
-                                      Text(
-                                        "Like",
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                      SizedBox(width: 15.0),
-                                      Icon(
-                                        Icons.comment_outlined,
-                                        color: Colors.grey,
-                                      ),
-                                      SizedBox(width: 7.5),
-                                      Text(
-                                        "Comment",
-                                        style: TextStyle(
-                                          color: Colors.grey,
-                                        ),
-                                      )
-                                    ],
-                                  )
-                                ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0,
                               ),
-                            );
-                          },
-                        );
-                      }),
+                              child: Text(
+                                post?.text ?? "",
+                              ),
+                            ),
+                            const Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.thumb_up_alt_outlined,
+                                  color: Colors.grey,
+                                ),
+                                SizedBox(width: 7.5),
+                                Text(
+                                  "Like",
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                SizedBox(width: 15.0),
+                                Icon(
+                                  Icons.comment_outlined,
+                                  color: Colors.grey,
+                                ),
+                                SizedBox(width: 7.5),
+                                Text(
+                                  "Comment",
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                  ),
+                                )
+                              ],
+                            )
+                          ],
+                        ),
+                      );
+                    },
+                  ),
                 ),
               )
             ],
@@ -319,14 +310,17 @@ class _CommunityState extends State<Community> {
     });
   }
 
-  String _formatTimeAgo(DateTime dateTime) {
-    final Duration diff = DateTime.now().difference(dateTime);
+  String _formatTimeAgo(String isoString) {
+    final date = DateTime.parse(isoString).toLocal();
+    final now = DateTime.now();
+    final diff = now.difference(date);
 
     if (diff.inSeconds < 60) return '${diff.inSeconds}s ago';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}w ago';
 
-    return DateFormat.yMMMd().format(dateTime); // e.g. May 13, 2025
+    return '${(diff.inDays / 30).floor()}mo ago';
   }
 }

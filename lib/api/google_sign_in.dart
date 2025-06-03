@@ -1,4 +1,6 @@
 import 'package:circulahealth/api/dio.dart';
+import 'package:circulahealth/models/chat_messages.dart';
+import 'package:circulahealth/models/posts.dart';
 import 'package:circulahealth/models/user.dart';
 import 'package:circulahealth/providers/main_provider.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -88,6 +90,53 @@ Future<UserDetails?> getUserDetails(String email) async {
     return result;
   } catch (e) {
     return null;
+  }
+}
+
+Future<void> addMessage(
+    String senderEmail, String receiverEmail, String message) async {
+  final Dio _dio = setupDio();
+  try {
+    final body = {
+      'senderEmail': senderEmail,
+      'receiverEmail': receiverEmail,
+      'message': message
+    };
+    await _dio.post(
+      "https://circula-nestjs-production.up.railway.app/chat/add-message",
+      data: body,
+    );
+  } catch (e) {
+    return null;
+  }
+}
+
+Future<List<dynamic>> getChatMessages(String email) async {
+  final Dio _dio = setupDio();
+  try {
+    var response = await _dio.get(
+      "https://circula-nestjs-production.up.railway.app/chat/messages?email=$email",
+    );
+    List<dynamic> chatMessages = response.data
+        .map((json) => ChatMessagesResponse.fromJson(json))
+        .toList();
+    return chatMessages;
+  } catch (e) {
+    return [];
+  }
+}
+
+Future<List<dynamic>> getPosts() async {
+  final Dio _dio = setupDio();
+  try {
+    var response = await _dio.get(
+      "https://circula-nestjs-production.up.railway.app/users/get-posts",
+    );
+    List<dynamic> posts =
+        response.data.map((json) => PostsResponse.fromJson(json)).toList();
+    return posts;
+  } catch (e) {
+    return [];
   }
 }
 
