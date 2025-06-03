@@ -8,16 +8,10 @@ import 'package:circulahealth/sign_in.dart';
 import 'package:circulahealth/sign_up.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  LocationPermission permission = await Geolocator.checkPermission();
-  if (permission != LocationPermission.always &&
-      permission != LocationPermission.whileInUse) {
-    Geolocator.requestPermission();
-  }
   runApp(const MyApp());
 }
 
