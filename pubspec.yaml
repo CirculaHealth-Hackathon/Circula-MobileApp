@@ -56,6 +56,7 @@ dependencies:
   http: ^1.4.0
   dio: ^5.8.0+1
   flutter_dotenv: ^5.2.1
+  flutter_launcher_icons: ^0.14.3
 
 dev_dependencies:
   flutter_test:
@@ -71,6 +72,12 @@ dev_dependencies:
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png" # <-- your icon path
+  min_sdk_android: 21
+
 # The following section is specific to Flutter packages.
 flutter:
   # The following line ensures that the Material Icons font is
@@ -83,6 +90,7 @@ flutter:
     - assets/images/
     - assets/json_files/
     - assets/animations/
+    - assets/icon/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
