@@ -6,8 +6,13 @@
         android:label="circulahealth"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        <meta-data android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBR84O9wqhKn8_8GHELgHdkqOckmeNGy40"/>
+        <meta-data 
+        android:name="com.google.android.geo.API_KEY"
+        android:value="AIzaSyBR84O9wqhKn8_8GHELgHdkqOckmeNGy40"/>
+        <meta-data
+        android:name="com.google.android.gms.client_id"
+        android:value="500759118187-3f9b8psf1ar7ue6nud5au68havgihdnm.apps.googleusercontent.com" 
+        />
         <activity
             android:name=".MainActivity"
             android:exported="true"

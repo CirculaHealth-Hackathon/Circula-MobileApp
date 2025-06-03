@@ -1,3 +1,5 @@
+import 'package:circulahealth/api/chat_service.dart';
+import 'package:circulahealth/api/joke_service.dart';
 import 'package:circulahealth/providers/main_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -28,6 +30,19 @@ class ChatMessage {
       this.isImage = false});
 }
 
+class TheMessage {
+  final String text;
+  final String sender;
+  final String receiver;
+  final String avatarUrl;
+
+  TheMessage(
+      {required this.text,
+      required this.sender,
+      required this.receiver,
+      required this.avatarUrl});
+}
+
 class ChatScreen extends StatefulWidget {
   @override
   _ChatScreenState createState() => _ChatScreenState();
@@ -37,8 +52,21 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isLoading = false;
   final ScrollController _scrollController = ScrollController();
 
+  List<TheMessage> chatMessages = [];
+
   final TextEditingController _controller = TextEditingController();
   bool _botTyping = false;
+  late ChatService chatService;
+  JokeService jokeService = new JokeService();
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    chatService = ChatService();
+    chatService.connect("habebo@gmail.com");
+    chatMessages = [];
+  }
 
   void scrollToBottom() {
     _scrollController.animateTo(
@@ -90,13 +118,13 @@ class _ChatScreenState extends State<ChatScreen> {
     return Row(
       mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
       children: [
-        if (!isMe) ...[
-          CircleAvatar(
-            backgroundImage: NetworkImage(photoUrl),
-            radius: 16,
-          ),
-          const SizedBox(width: 6),
-        ],
+        // if (!isMe) ...[
+        //   CircleAvatar(
+        //     backgroundImage: NetworkImage(photoUrl),
+        //     radius: 16,
+        //   ),
+        //   const SizedBox(width: 6),
+        // ],
         CustomPaint(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -139,34 +167,18 @@ class _ChatScreenState extends State<ChatScreen> {
         body: Column(
           children: [
             Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('chats')
-                      .doc("${mainProvider.userCredential.user?.uid}_bot")
-                      .collection('messages')
-                      .orderBy('timestamp', descending: false)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final messages = snapshot.data!.docs;
-                    WidgetsBinding.instance
-                        .addPostFrameCallback((_) => scrollToBottom());
-                    return ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(8),
-                      itemCount: messages.length,
-                      itemBuilder: (context, index) {
-                        return _buildMessageBubble(
-                            messages[index]["text"],
-                            mainProvider.userCredential.user?.uid ?? "",
-                            messages[index]["senderId"],
-                            mainProvider.userCredential.user?.photoURL ?? "");
-                      },
-                    );
-                  }),
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(8),
+                itemCount: chatMessages.length,
+                itemBuilder: (context, index) {
+                  return _buildMessageBubble(
+                      chatMessages[index].text,
+                      chatMessages[index].sender,
+                      chatMessages[index].receiver,
+                      chatMessages[index].avatarUrl);
+                },
+              ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
@@ -229,8 +241,28 @@ class _ChatScreenState extends State<ChatScreen> {
                       if (_isLoading) {
                         return;
                       }
-                      await _sendMessage(
-                          mainProvider.userCredential.user?.uid ?? "");
+                      setState(() {
+                        var theMessage = TheMessage(
+                            text: _controller.text.trim(),
+                            sender: "stanlyskwok1@gmail.com",
+                            receiver: "stanlyskwok1@gmail.com",
+                            avatarUrl: "");
+                        chatMessages.add(theMessage);
+                        WidgetsBinding.instance
+                            .addPostFrameCallback((_) => scrollToBottom());
+                        _controller.text = "";
+                      });
+                      var joke = await jokeService.getRandomJoke();
+                      setState(() {
+                        var theMessage = TheMessage(
+                            text: "${joke.setup}\n😂\n${joke.punchline}",
+                            sender: "chatbot@gmail.com",
+                            receiver: "stanlyskwok1@gmail.com",
+                            avatarUrl: "");
+                        chatMessages.add(theMessage);
+                        WidgetsBinding.instance
+                            .addPostFrameCallback((_) => scrollToBottom());
+                      });
                     },
                     child: const Icon(Icons.send),
                   ),

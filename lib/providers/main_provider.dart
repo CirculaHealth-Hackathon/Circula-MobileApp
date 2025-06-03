@@ -10,7 +10,7 @@ class MainProvider with ChangeNotifier {
   String appBarTitle = "";
   DonorPageState? donorPageState = DonorPageState.donor;
   bool isLoading = false;
-  late UserCredential userCredential;
+  var userCredential;
 
   void setSelectedIndex(int newIndex) {
     selectedIndex = newIndex;
@@ -42,7 +42,7 @@ class MainProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void setUserCredential(UserCredential currentUserCredential) {
+  void setUserCredential(currentUserCredential) {
     userCredential = currentUserCredential;
     notifyListeners();
   }

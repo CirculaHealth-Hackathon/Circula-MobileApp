@@ -1,10 +1,10 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:circulahealth/api/dio.dart';
 import 'package:circulahealth/api/google_sign_in.dart';
 import 'package:circulahealth/components/animated_button.dart';
-import 'package:circulahealth/components/show_alert.dart';
+import 'package:circulahealth/models/user.dart';
 import 'package:circulahealth/providers/main_provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -25,6 +25,7 @@ class _SettingsState extends State<Settings> {
   File? _profileImageFile;
   File? _legalDocumentFile;
   bool _isLoading = false;
+  bool _isLegalDocumentLoading = false;
   TextEditingController _usernameController = new TextEditingController();
   TextEditingController _fullNameController = new TextEditingController();
   TextEditingController _ageController = new TextEditingController();
@@ -33,10 +34,11 @@ class _SettingsState extends State<Settings> {
   TextEditingController _whatsAppNumberController = new TextEditingController();
   String profilePictureUrl = "";
   String legalDocumentUrl = "";
-  var userData;
   String? pickedBloodType = null;
 
   List<String> items = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+  UserDetails? userData;
 
   Future<void> _pickImage() async {
     try {
@@ -47,12 +49,8 @@ class _SettingsState extends State<Settings> {
           await _picker.pickImage(source: ImageSource.gallery); // or .camera
 
       if (pickedFile != null) {
-        String theUrl = "";
-        theUrl = await uploadProfilePicture(File(pickedFile.path),
-            _mainProvider.userCredential.user?.uid ?? "");
         setState(() {
           _profileImageFile = File(pickedFile.path);
-          profilePictureUrl = theUrl;
           _isLoading = false;
         });
       }
@@ -69,27 +67,23 @@ class _SettingsState extends State<Settings> {
   Future<void> _pickLegalDocumentImage() async {
     try {
       setState(() {
-        _isLoading = true;
+        _isLegalDocumentLoading = true;
       });
       final XFile? pickedFile =
           await _picker.pickImage(source: ImageSource.gallery); // or .camera
 
       if (pickedFile != null) {
-        String theUrl = "";
-        theUrl = await uploadProfilePicture(File(pickedFile.path),
-            _mainProvider.userCredential.user?.uid ?? "");
         setState(() {
           _legalDocumentFile = File(pickedFile.path);
-          legalDocumentUrl = theUrl;
-          _isLoading = false;
+          _isLegalDocumentLoading = false;
         });
       }
       setState(() {
-        _isLoading = false;
+        _isLegalDocumentLoading = false;
       });
     } catch (e) {
       setState(() {
-        _isLoading = false;
+        _isLegalDocumentLoading = false;
       });
     }
   }
@@ -104,31 +98,20 @@ class _SettingsState extends State<Settings> {
         setState(() {
           _mainProvider.setIsLoading(true);
         });
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) return;
-
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-        if (doc.exists) {
-          final theData = doc.data();
-          userData = theData;
-          setState(() {
-            _fullNameController.text = userData?["fullName"] ?? "";
-            _ageController.text = userData?["age"]?.toString() ?? "";
-            if (userData["bloodType"] != "") {
-              pickedBloodType = userData["bloodType"];
-            }
-            _homeLocationController.text = userData?["homeLocation"] ?? "";
-            profilePictureUrl = userData?["photoUrl"] ?? "";
-            _usernameController.text = userData?["username"] ?? "";
-            _whatsAppNumberController.text = userData?["whatsAppNumber"] ?? "";
-            allowGPS = userData?['gpsAllowed'] ?? false;
-            legalDocumentUrl = userData?['legalDocumentUrl'] ?? "";
-          });
-        }
+        var user = await getUserDetails(_mainProvider.userCredential);
+        userData = user;
         setState(() {
+          _fullNameController.text = userData?.fullName ?? "";
+          _ageController.text = userData?.age?.toString() ?? "";
+          if (userData?.bloodType != "" && userData?.bloodType != null) {
+            pickedBloodType = userData?.bloodType;
+          }
+          _homeLocationController.text = userData?.homeLocation ?? "";
+          profilePictureUrl = userData?.photoUrl ?? "";
+          _usernameController.text = userData?.username ?? "";
+          _whatsAppNumberController.text = userData?.whatsAppNumber ?? "";
+          allowGPS = userData?.gpsAllowed ?? false;
+          legalDocumentUrl = userData?.legalDocumentUrl ?? "";
           _mainProvider.setIsLoading(false);
         });
       } catch (e) {
@@ -161,123 +144,141 @@ class _SettingsState extends State<Settings> {
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        profilePictureUrl != ""
-                            ? _isLoading
-                                ? Center(
-                                    child: Container(
-                                      margin: const EdgeInsets.only(
-                                        top: 20.0,
-                                      ),
-                                      width: 150,
-                                      height: 150,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        border: Border.all(
-                                          color: Colors.grey,
-                                        ),
-                                        borderRadius:
-                                            BorderRadius.circular(500000),
-                                      ),
-                                      child: const Center(
-                                          child: CircularProgressIndicator()),
+                        _profileImageFile != null
+                            ? Center(
+                                child: Container(
+                                  margin: const EdgeInsets.only(
+                                    top: 20.0,
+                                  ),
+                                  child: CircleAvatar(
+                                    radius: 75,
+                                    backgroundImage: FileImage(
+                                      _profileImageFile!,
                                     ),
-                                  )
-                                : InkWell(
-                                    onTap: () {
-                                      if (_isLoading) return;
-                                      _pickImage();
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(top: 20.0),
-                                      child: Center(
-                                        child: ClipOval(
-                                          child: Image.network(
-                                            profilePictureUrl,
-                                            width: 150,
-                                            height: 150,
-                                            fit: BoxFit.cover,
-                                            loadingBuilder: (context, child,
-                                                loadingProgress) {
-                                              if (loadingProgress == null) {
-                                                return child;
-                                              }
-                                              return Container(
-                                                width: 150,
-                                                height: 150,
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  border: Border.all(
-                                                    color: Colors.grey,
-                                                  ),
-                                                ),
-                                                child: const Center(
-                                                    child:
-                                                        CircularProgressIndicator()),
-                                              );
-                                            },
-                                            errorBuilder:
-                                                (context, error, stackTrace) {
-                                              return const SizedBox(
-                                                width: 150,
-                                                height: 150,
-                                                child: Center(
-                                                    child: Icon(Icons.error)),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                            : Center(
-                                child: InkWell(
-                                  onTap: () {
-                                    if (_isLoading) return;
-                                    _pickImage();
-                                  },
-                                  child: Container(
-                                    // padding: const EdgeInsets.symmetric(vertical: 50),
-                                    margin: const EdgeInsets.only(
-                                      top: 20.0,
-                                    ),
-                                    width: 150,
-                                    height: 150,
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: const Color(0xFFDFDFDF),
-                                        width: 2.0,
-                                      ),
-                                      borderRadius:
-                                          BorderRadius.circular(500000),
-                                    ),
-                                    child: _isLoading
-                                        ? const Center(
-                                            child: SizedBox(
-                                              width: 80,
-                                              height: 80,
-                                              child: CircularProgressIndicator(
-                                                valueColor:
-                                                    AlwaysStoppedAnimation<
-                                                        Color>(Colors.blue),
-                                                strokeWidth: 4.0,
-                                              ),
-                                            ),
-                                          )
-                                        : _profileImageFile != null
-                                            ? CircleAvatar(
-                                                radius: 75,
-                                                backgroundImage: FileImage(
-                                                  _profileImageFile!,
-                                                ),
-                                              )
-                                            : const Icon(
-                                                Icons.upload,
-                                                color: Colors.black,
-                                                size: 80.0,
-                                              ),
                                   ),
                                 ),
-                              ),
+                              )
+                            : profilePictureUrl != ""
+                                ? _isLoading
+                                    ? Center(
+                                        child: Container(
+                                          margin: const EdgeInsets.only(
+                                            top: 20.0,
+                                          ),
+                                          width: 150,
+                                          height: 150,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            border: Border.all(
+                                              color: Colors.grey,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(500000),
+                                          ),
+                                          child: const Center(
+                                              child:
+                                                  CircularProgressIndicator()),
+                                        ),
+                                      )
+                                    : InkWell(
+                                        onTap: () {
+                                          if (_isLoading) return;
+                                          _pickImage();
+                                        },
+                                        child: Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 20.0),
+                                          child: Center(
+                                            child: ClipOval(
+                                              child: Image.network(
+                                                profilePictureUrl,
+                                                width: 150,
+                                                height: 150,
+                                                fit: BoxFit.cover,
+                                                loadingBuilder: (context, child,
+                                                    loadingProgress) {
+                                                  if (loadingProgress == null) {
+                                                    return child;
+                                                  }
+                                                  return Container(
+                                                    width: 150,
+                                                    height: 150,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white,
+                                                      border: Border.all(
+                                                        color: Colors.grey,
+                                                      ),
+                                                    ),
+                                                    child: const Center(
+                                                        child:
+                                                            CircularProgressIndicator()),
+                                                  );
+                                                },
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
+                                                  return const SizedBox(
+                                                    width: 150,
+                                                    height: 150,
+                                                    child: Center(
+                                                        child:
+                                                            Icon(Icons.error)),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                : Center(
+                                    child: InkWell(
+                                      onTap: () {
+                                        if (_isLoading) return;
+                                        _pickImage();
+                                      },
+                                      child: Container(
+                                        // padding: const EdgeInsets.symmetric(vertical: 50),
+                                        margin: const EdgeInsets.only(
+                                          top: 20.0,
+                                        ),
+                                        width: 150,
+                                        height: 150,
+                                        decoration: BoxDecoration(
+                                          border: Border.all(
+                                            color: const Color(0xFFDFDFDF),
+                                            width: 2.0,
+                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(500000),
+                                        ),
+                                        child: _isLoading
+                                            ? const Center(
+                                                child: SizedBox(
+                                                  width: 80,
+                                                  height: 80,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                            Color>(Colors.blue),
+                                                    strokeWidth: 4.0,
+                                                  ),
+                                                ),
+                                              )
+                                            : _profileImageFile != null
+                                                ? CircleAvatar(
+                                                    radius: 75,
+                                                    backgroundImage: FileImage(
+                                                      _profileImageFile!,
+                                                    ),
+                                                  )
+                                                : const Icon(
+                                                    Icons.upload,
+                                                    color: Colors.black,
+                                                    size: 80.0,
+                                                  ),
+                                      ),
+                                    ),
+                                  ),
                         const Padding(
                           padding: EdgeInsets.only(
                             bottom: 10.0,
@@ -552,7 +553,7 @@ class _SettingsState extends State<Settings> {
                                 children: [
                                   InkWell(
                                     onTap: () {
-                                      if (_isLoading) return;
+                                      if (_isLegalDocumentLoading) return;
                                       _pickLegalDocumentImage();
                                     },
                                     child: Container(
@@ -570,7 +571,7 @@ class _SettingsState extends State<Settings> {
                                         borderRadius:
                                             BorderRadius.circular(500000),
                                       ),
-                                      child: _isLoading
+                                      child: _isLegalDocumentLoading
                                           ? const Center(
                                               child: SizedBox(
                                                 width: 80,
@@ -584,63 +585,73 @@ class _SettingsState extends State<Settings> {
                                                 ),
                                               ),
                                             )
-                                          : legalDocumentUrl != ""
-                                              ? InkWell(
-                                                  onTap: () {
-                                                    if (_isLoading) return;
-                                                    _pickLegalDocumentImage();
-                                                  },
-                                                  child: Center(
-                                                    child: ClipOval(
-                                                      child: Image.network(
-                                                        legalDocumentUrl,
-                                                        width: 150,
-                                                        height: 150,
-                                                        fit: BoxFit.cover,
-                                                        loadingBuilder: (context,
-                                                            child,
-                                                            loadingProgress) {
-                                                          if (loadingProgress ==
-                                                              null) {
-                                                            return child;
-                                                          }
-                                                          return Container(
-                                                            width: 150,
-                                                            height: 150,
-                                                            decoration:
-                                                                BoxDecoration(
-                                                              color:
-                                                                  Colors.white,
-                                                              border:
-                                                                  Border.all(
-                                                                color:
-                                                                    Colors.grey,
-                                                              ),
-                                                            ),
-                                                            child: const Center(
-                                                                child:
-                                                                    CircularProgressIndicator()),
-                                                          );
-                                                        },
-                                                        errorBuilder: (context,
-                                                            error, stackTrace) {
-                                                          return const SizedBox(
-                                                            width: 150,
-                                                            height: 150,
-                                                            child: Center(
-                                                                child: Icon(Icons
-                                                                    .error)),
-                                                          );
-                                                        },
-                                                      ),
-                                                    ),
+                                          : _legalDocumentFile != null
+                                              ? CircleAvatar(
+                                                  radius: 75,
+                                                  backgroundImage: FileImage(
+                                                    _legalDocumentFile!,
                                                   ),
                                                 )
-                                              : const Icon(
-                                                  Icons.upload,
-                                                  color: Colors.black,
-                                                  size: 80.0,
-                                                ),
+                                              : legalDocumentUrl != ""
+                                                  ? InkWell(
+                                                      onTap: () {
+                                                        if (_isLegalDocumentLoading)
+                                                          return;
+                                                        _pickLegalDocumentImage();
+                                                      },
+                                                      child: Center(
+                                                        child: ClipOval(
+                                                          child: Image.network(
+                                                            legalDocumentUrl,
+                                                            width: 150,
+                                                            height: 150,
+                                                            fit: BoxFit.cover,
+                                                            loadingBuilder:
+                                                                (context, child,
+                                                                    loadingProgress) {
+                                                              if (loadingProgress ==
+                                                                  null) {
+                                                                return child;
+                                                              }
+                                                              return Container(
+                                                                width: 150,
+                                                                height: 150,
+                                                                decoration:
+                                                                    BoxDecoration(
+                                                                  color: Colors
+                                                                      .white,
+                                                                  border: Border
+                                                                      .all(
+                                                                    color: Colors
+                                                                        .grey,
+                                                                  ),
+                                                                ),
+                                                                child: const Center(
+                                                                    child:
+                                                                        CircularProgressIndicator()),
+                                                              );
+                                                            },
+                                                            errorBuilder:
+                                                                (context, error,
+                                                                    stackTrace) {
+                                                              return const SizedBox(
+                                                                width: 150,
+                                                                height: 150,
+                                                                child: Center(
+                                                                    child: Icon(
+                                                                        Icons
+                                                                            .error)),
+                                                              );
+                                                            },
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    )
+                                                  : const Icon(
+                                                      Icons.upload,
+                                                      color: Colors.black,
+                                                      size: 80.0,
+                                                    ),
                                     ),
                                   ),
                                   const SizedBox(
@@ -713,14 +724,19 @@ class _SettingsState extends State<Settings> {
                   ),
                   child: CustomAnimatedButton(
                     onButtonpressed: () async {
-                      if (_isLoading) return;
+                      if (_isLoading || _isLegalDocumentLoading) return;
+                      bool profileImageNotPicked =
+                          profilePictureUrl != "" || _profileImageFile != null;
+                      bool legalDocumentNotPicked =
+                          legalDocumentUrl != "" || _legalDocumentFile != null;
                       if (_usernameController.text == "" ||
                           _fullNameController.text == "" ||
                           _ageController.text == "" ||
                           pickedBloodType == null ||
                           _homeLocationController.text == "" ||
                           _whatsAppNumberController.text == "" ||
-                          legalDocumentUrl == "") {
+                          profileImageNotPicked == false ||
+                          legalDocumentNotPicked == false) {
                         return AwesomeDialog(
                           context: context,
                           dialogType: DialogType.infoReverse,
@@ -734,14 +750,49 @@ class _SettingsState extends State<Settings> {
                       }
                       try {
                         mainProvider.setIsLoading(true);
+                        var profileImageUrl;
+                        var dio = setupDio();
+                        if (_profileImageFile != null) {
+                          final formData = FormData.fromMap({
+                            'file': await MultipartFile.fromFile(
+                                _profileImageFile?.path ?? "",
+                                filename:
+                                    _profileImageFile?.path.split('/').last),
+                          });
+
+                          final response = await dio.post(
+                            'https://circula-nestjs-production.up.railway.app/upload/image',
+                            data: formData,
+                          );
+                          profileImageUrl = response.data['imageUrl'];
+                        }
+                        var legalDocumentImageUrl;
+                        if (_legalDocumentFile != null) {
+                          final formData = FormData.fromMap({
+                            'file': await MultipartFile.fromFile(
+                                _legalDocumentFile?.path ?? "",
+                                filename:
+                                    _legalDocumentFile?.path.split('/').last),
+                          });
+                          final response = await dio.post(
+                            'https://circula-nestjs-production.up.railway.app/upload/image',
+                            data: formData,
+                          );
+                          legalDocumentImageUrl = response.data['imageUrl'];
+                        }
                         await updateUserProfileData({
+                          "email": mainProvider.userCredential,
                           "fullName": _fullNameController.text,
                           "bloodType": pickedBloodType,
                           "age": int.tryParse(_ageController.text) ?? 0,
                           "homeLocation": _homeLocationController.text,
-                          "photoUrl": profilePictureUrl,
+                          "photoUrl": _profileImageFile != null
+                              ? profileImageUrl
+                              : profilePictureUrl,
                           "hasRegistered": true,
-                          "legalDocumentUrl": legalDocumentUrl,
+                          "legalDocumentUrl": _legalDocumentFile != null
+                              ? legalDocumentImageUrl
+                              : legalDocumentUrl,
                           "username": _usernameController.text,
                           "whatsAppNumber": _whatsAppNumberController.text,
                           "gpsAllowed": allowGPS

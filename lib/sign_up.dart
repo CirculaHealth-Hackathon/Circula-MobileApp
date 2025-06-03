@@ -1,3 +1,4 @@
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:circulahealth/api/google_sign_in.dart';
 import 'package:circulahealth/components/animated_button.dart';
 import 'package:circulahealth/components/loading_component.dart';
@@ -74,6 +75,7 @@ class _SignUpState extends State<SignUp> {
                           ),
                         ),
                         TextField(
+                          keyboardType: TextInputType.emailAddress,
                           controller: _emailController,
                           decoration: InputDecoration(
                             hintText: 'Your email',
@@ -134,8 +136,23 @@ class _SignUpState extends State<SignUp> {
                           child: CustomAnimatedButton(
                             buttonTitle: "Sign Up",
                             onButtonpressed: () async {
+                              final emailRegex =
+                                  RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
                               if (_emailController.text.isNotEmpty &&
                                   _passwordController.text.isNotEmpty) {
+                                if (!emailRegex
+                                    .hasMatch(_emailController.text)) {
+                                  return AwesomeDialog(
+                                    context: context,
+                                    dialogType: DialogType.info,
+                                    animType: AnimType.scale,
+                                    title: 'Alert!',
+                                    desc: 'Please enter an email format!',
+                                    btnOkOnPress: () {},
+                                    btnOkColor: Colors.green,
+                                    headerAnimationLoop: false,
+                                  ).show();
+                                }
                                 setState(() {
                                   isLoading = true;
                                 });
@@ -147,8 +164,16 @@ class _SignUpState extends State<SignUp> {
                                   setState(() {
                                     isLoading = false;
                                   });
-                                  showAlert(context, theResult, "Failed", "OK",
-                                      () {});
+                                  AwesomeDialog(
+                                    context: context,
+                                    dialogType: DialogType.info,
+                                    animType: AnimType.scale,
+                                    title: 'Alert!',
+                                    desc: theResult,
+                                    btnOkOnPress: () {},
+                                    btnOkColor: Colors.green,
+                                    headerAnimationLoop: false,
+                                  ).show();
                                 } else {
                                   Navigator.push(
                                     context,
@@ -157,6 +182,17 @@ class _SignUpState extends State<SignUp> {
                                     ),
                                   );
                                 }
+                              } else {
+                                return AwesomeDialog(
+                                  context: context,
+                                  dialogType: DialogType.info,
+                                  animType: AnimType.scale,
+                                  title: 'Alert!',
+                                  desc: 'Please fill in email and password',
+                                  btnOkOnPress: () {},
+                                  btnOkColor: Colors.green,
+                                  headerAnimationLoop: false,
+                                ).show();
                               }
                             },
                           ),
@@ -210,13 +246,18 @@ class _SignUpState extends State<SignUp> {
                                 isLoading = true;
                               });
                               FocusScope.of(context).unfocus();
-                              await signInWithGoogle(mainProvider);
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const MapPage(),
-                                ),
-                              );
+                              var result = await signInWithGoogle(mainProvider);
+                              if (result != null) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const MapPage(),
+                                  ),
+                                );
+                              }
+                              setState(() {
+                                isLoading = false;
+                              });
                             } catch (e) {
                               setState(() {
                                 isLoading = false;

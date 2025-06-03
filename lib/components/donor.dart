@@ -1,16 +1,15 @@
 import 'dart:io';
 
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:circulahealth/api/dio.dart';
 import 'package:circulahealth/api/google_sign_in.dart';
 import 'package:circulahealth/components/animated_button.dart';
-import 'package:circulahealth/components/loading_component.dart';
 import 'package:circulahealth/components/show_alert.dart';
+import 'package:circulahealth/models/user.dart';
 import 'package:circulahealth/providers/main_provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -36,7 +35,7 @@ class _DonorState extends State<Donor> {
   bool _isLoading = false;
   String? pickedBloodType = null;
   late MainProvider _mainProvider;
-  var userData;
+  UserDetails? userData;
 
   List<String> items = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
@@ -76,34 +75,19 @@ class _DonorState extends State<Donor> {
         setState(() {
           _mainProvider.setIsLoading(true);
         });
-        final user = FirebaseAuth.instance.currentUser;
-        if (user == null) {
-          setState(() {
-            _mainProvider.setIsLoading(false);
-          });
-          return;
-        }
-
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-
-        if (doc.exists) {
-          final theData = doc.data();
-          userData = theData;
-          if (theData?['hasRegistered']) {
-            if (mounted) {
-              setState(() {
-                _mainProvider.setDonorPageState(DonorPageState.profile);
-              });
-            }
-          } else if (theData?['hasChosenDonateBlood']) {
-            if (mounted) {
-              setState(() {
-                _mainProvider.setDonorPageState(DonorPageState.register);
-              });
-            }
+        var user = await getUserDetails(_mainProvider.userCredential);
+        userData = user;
+        if (user?.hasRegistered ?? false) {
+          if (mounted) {
+            setState(() {
+              _mainProvider.setDonorPageState(DonorPageState.profile);
+            });
+          }
+        } else if (user?.hasChosenDonateBlood ?? false) {
+          if (mounted) {
+            setState(() {
+              _mainProvider.setDonorPageState(DonorPageState.register);
+            });
           }
         }
         setState(() {
@@ -248,7 +232,8 @@ class _DonorState extends State<Donor> {
                               });
                             } else {
                               await updateUserProfileData({
-                                "hasChosenDonateBlood": true,
+                                "email": mainProvider.userCredential,
+                                "hasChosenDonateBlood": true
                               });
                               setState(() {
                                 mainProvider.donorPageState =
@@ -560,17 +545,21 @@ class _DonorState extends State<Donor> {
                                       ).show();
                                     }
                                     mainProvider.setIsLoading(true);
-                                    String photoUrl = mainProvider
-                                            .userCredential.user?.photoURL ??
-                                        "";
+                                    var imageUrl;
                                     if (_imageFile != null) {
-                                      photoUrl = await uploadProfilePicture(
-                                          _imageFile ?? File(""),
-                                          mainProvider
-                                                  .userCredential.user?.uid ??
-                                              "");
-                                      await mainProvider.userCredential.user
-                                          ?.updatePhotoURL(photoUrl);
+                                      final formData = FormData.fromMap({
+                                        'file': await MultipartFile.fromFile(
+                                            _imageFile?.path ?? "",
+                                            filename: _imageFile?.path
+                                                .split('/')
+                                                .last),
+                                      });
+                                      var dio = setupDio();
+                                      final response = await dio.post(
+                                        'https://circula-nestjs-production.up.railway.app/upload/image',
+                                        data: formData,
+                                      );
+                                      imageUrl = response.data['imageUrl'];
                                     }
                                     await updateUserProfileData({
                                       "fullName": _fullNameController.text,
@@ -580,23 +569,16 @@ class _DonorState extends State<Donor> {
                                               0,
                                       "homeLocation":
                                           _homeLocationController.text,
-                                      "photoUrl": photoUrl,
-                                      "hasRegistered": true
+                                      "photoUrl": imageUrl,
+                                      "hasRegistered": true,
+                                      "email": mainProvider.userCredential
                                     });
-                                    mainProvider.setIsLoading(false);
-                                    final user =
-                                        FirebaseAuth.instance.currentUser;
-                                    if (user == null) return null;
 
-                                    final doc = await FirebaseFirestore.instance
-                                        .collection('users')
-                                        .doc(user.uid)
-                                        .get();
+                                    var user = await getUserDetails(
+                                        _mainProvider.userCredential);
+                                    userData = user;
+                                    mainProvider.setIsLoading(false);
                                     setState(() {
-                                      if (doc.exists) {
-                                        final theData = doc.data();
-                                        userData = theData;
-                                      }
                                       mainProvider.setDonorPageState(
                                           DonorPageState.profile);
                                     });
@@ -648,7 +630,7 @@ class _DonorState extends State<Donor> {
                                                 CrossAxisAlignment.center,
                                             children: [
                                               Text(
-                                                userData?["fullName"] ?? "",
+                                                userData?.fullName ?? "",
                                                 style: const TextStyle(
                                                   fontSize: 36,
                                                   fontWeight: FontWeight.bold,
@@ -656,7 +638,7 @@ class _DonorState extends State<Donor> {
                                                 textAlign: TextAlign.center,
                                               ),
                                               Text(
-                                                userData?["homeLocation"] ?? "",
+                                                userData?.homeLocation ?? "",
                                                 style: const TextStyle(
                                                   fontSize: 24,
                                                   fontWeight: FontWeight.bold,
@@ -694,8 +676,7 @@ class _DonorState extends State<Donor> {
                                                               ),
                                                             ),
                                                             Text(
-                                                              userData?[
-                                                                      "bloodType"] ??
+                                                              userData?.bloodType ??
                                                                   "",
                                                               style:
                                                                   const TextStyle(
@@ -724,7 +705,7 @@ class _DonorState extends State<Donor> {
                                                               ),
                                                             ),
                                                             Text(
-                                                              userData?["age"]
+                                                              userData?.age
                                                                       ?.toString() ??
                                                                   "",
                                                               style:
@@ -843,10 +824,10 @@ class _DonorState extends State<Donor> {
                                   top: -50,
                                   left: MediaQuery.of(context).size.width / 2 -
                                       45,
-                                  child: userData?["photoUrl"] != null
+                                  child: userData?.photoUrl != null
                                       ? ClipOval(
                                           child: Image.network(
-                                            userData?["photoUrl"] ?? '',
+                                            userData?.photoUrl ?? "",
                                             width: 100,
                                             height: 100,
                                             fit: BoxFit.cover,

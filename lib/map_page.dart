@@ -288,7 +288,6 @@ class _MapPageState extends State<MapPage> {
                         onMapCreated: (GoogleMapController controller) async {
                           setState(() {
                             _controller = controller;
-                            _showRouteToDestination();
                           });
                         },
                         markers: _markers,
