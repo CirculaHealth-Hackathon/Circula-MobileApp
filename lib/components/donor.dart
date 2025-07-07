@@ -14,8 +14,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-enum Donating { have, haveNot }
-
 class Donor extends StatefulWidget {
   Donor({super.key});
 
@@ -24,10 +22,7 @@ class Donor extends StatefulWidget {
 }
 
 class _DonorState extends State<Donor> {
-  bool haveDonatedValue = false;
-  bool haveNotDonatedValue = false;
-  Donating? _donating;
-
+  bool? haveDonated;
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _homeLocationController = TextEditingController();
@@ -134,66 +129,141 @@ class _DonorState extends State<Donor> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: <Widget>[
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(right: 8.0),
-                                child: Radio(
-                                  visualDensity: const VisualDensity(
-                                      horizontal: VisualDensity.minimumDensity,
-                                      vertical: VisualDensity.minimumDensity),
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  value: Donating.have,
-                                  groupValue: _donating,
-                                  onChanged: (Donating? value) {
-                                    setState(() {
-                                      _donating = value;
-                                      print(_donating);
-                                    });
-                                  },
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                haveDonated = true;
+                              });
+                            },
+                            child: Container(
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: (haveDonated ?? false)
+                                      ? const Color(0xFF216FFF)
+                                      : const Color(0xFFF87848), // Border color
+                                  width: 3.0, // Border width
+                                ),
+                                color: const Color(
+                                  0xFFF87848,
+                                ),
+                                borderRadius: BorderRadius.circular(
+                                  20.0,
                                 ),
                               ),
-                              const Text(
-                                'I have donated blood before.',
-                                style: TextStyle(
-                                  fontSize: 18.0,
-                                ),
+                              child: Stack(
+                                children: [
+                                  Container(
+                                    width: double.infinity,
+                                    height: 180,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 24,
+                                      horizontal: 20,
+                                    ),
+                                    child: const Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        SizedBox(),
+                                        Column(
+                                          children: [
+                                            Text(
+                                              "I have donated\nblood before",
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18.0,
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Image.asset(
+                                      'assets/images/donor-2.png',
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                           Padding(
                             padding: const EdgeInsets.only(top: 12.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 8.0),
-                                  child: Radio(
-                                    visualDensity: const VisualDensity(
-                                        horizontal:
-                                            VisualDensity.minimumDensity,
-                                        vertical: VisualDensity.minimumDensity),
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    value: Donating.haveNot,
-                                    groupValue: _donating,
-                                    onChanged: (Donating? value) {
-                                      setState(() {
-                                        _donating = value;
-                                        print(_donating);
-                                      });
-                                    },
-                                  ),
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  haveDonated = false;
+                                });
+                              },
+                              child: Container(
+                                margin:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      width: double.infinity,
+                                      height: 180,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 24,
+                                        horizontal: 20,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: (haveDonated != null &&
+                                                  haveDonated == false)
+                                              ? const Color(0xFF216FFF)
+                                              : const Color(
+                                                  0xFFAB92FF), // Border color
+                                          width: 3.0, // Border width
+                                        ),
+                                        color: const Color(
+                                          0xFFAB92FF,
+                                        ),
+                                        borderRadius: BorderRadius.circular(
+                                          20.0,
+                                        ),
+                                      ),
+                                      child: const Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          SizedBox(),
+                                          Column(
+                                            children: [
+                                              Text(
+                                                "This is my first time\ndonating blood",
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 18.0,
+                                                ),
+                                              ),
+                                            ],
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: Image.asset(
+                                        'assets/images/blood-2.png',
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const Text(
-                                  'I have not donated blood before.',
-                                  style: TextStyle(
-                                    fontSize: 18.0,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ],
@@ -206,7 +276,7 @@ class _DonorState extends State<Donor> {
                         child: CustomAnimatedButton(
                           onButtonpressed: () async {
                             FocusScope.of(context).unfocus();
-                            if (_donating == null) {
+                            if (haveDonated == null) {
                               return AwesomeDialog(
                                 context: context,
                                 dialogType: DialogType.info,
@@ -219,7 +289,7 @@ class _DonorState extends State<Donor> {
                               ).show();
                             }
                             mainProvider.setIsLoading(true);
-                            if (_donating == Donating.haveNot) {
+                            if (haveDonated == false) {
                               showAlert(
                                   context,
                                   "In order to provide proof to be a donor in Circula.",
@@ -486,39 +556,41 @@ class _DonorState extends State<Donor> {
                                 if (_isLoading) return;
                                 _pickImage();
                               },
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 50),
-                                margin: const EdgeInsets.only(
-                                  top: 20.0,
-                                ),
-                                width: MediaQuery.of(context).size.width,
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: const Color(0xFFDFDFDF),
-                                    width: 2.0,
+                              child: Center(
+                                child: Container(
+                                  height: 200,
+                                  margin: const EdgeInsets.only(
+                                    top: 20.0,
                                   ),
-                                  borderRadius: BorderRadius.circular(8),
+                                  padding: EdgeInsets.symmetric(vertical: 20),
+                                  width: MediaQuery.of(context).size.width,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: const Color(0xFFDFDFDF),
+                                      width: 2.0,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: _isLoading
+                                      ? const Center(
+                                          child: SizedBox(
+                                              width: 80,
+                                              height: 80,
+                                              child: CircularProgressIndicator(
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                        Color>(Colors.blue),
+                                                strokeWidth: 4.0,
+                                              )),
+                                        )
+                                      : _imageFile != null
+                                          ? Image.file(
+                                              _imageFile!,
+                                              height: 200,
+                                            )
+                                          : const Icon(Icons.upload,
+                                              color: Colors.black, size: 80.0),
                                 ),
-                                child: _isLoading
-                                    ? const Center(
-                                        child: SizedBox(
-                                            width: 80,
-                                            height: 80,
-                                            child: CircularProgressIndicator(
-                                              valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                      Colors.blue),
-                                              strokeWidth: 4.0,
-                                            )),
-                                      )
-                                    : _imageFile != null
-                                        ? Image.file(
-                                            _imageFile!,
-                                            height: 200,
-                                          )
-                                        : const Icon(Icons.upload,
-                                            color: Colors.black, size: 80.0),
                               ),
                             ),
                             Padding(

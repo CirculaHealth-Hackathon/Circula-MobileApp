@@ -17,7 +17,7 @@ void showAlert(
             title,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 33.0,
+              fontSize: 24.0,
             ),
             textAlign: TextAlign.center,
           ),

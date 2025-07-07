@@ -18,8 +18,8 @@ Future<dynamic> signInWithGoogle(MainProvider mainProvider) async {
     final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
     final Dio _dio = setupDio();
 
-    // final GoogleSignInAuthentication? googleAuth =
-    //     await googleUser?.authentication;
+    final GoogleSignInAuthentication? googleAuth =
+        await googleUser?.authentication;
     final body = {
       'email': googleUser?.email,
     };
@@ -104,6 +104,19 @@ Future<void> addMessage(
     };
     await _dio.post(
       "https://circula-nestjs-production.up.railway.app/chat/add-message",
+      data: body,
+    );
+  } catch (e) {
+    return null;
+  }
+}
+
+Future<void> addReport(String senderEmail, String message, String type) async {
+  final Dio _dio = setupDio();
+  try {
+    final body = {'senderEmail': senderEmail, 'type': type, 'message': message};
+    await _dio.post(
+      "https://circula-nestjs-production.up.railway.app/report/add-report",
       data: body,
     );
   } catch (e) {

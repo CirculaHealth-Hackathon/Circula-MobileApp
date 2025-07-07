@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 enum DonorPageState { donor, register, profile, request }
 
 class MainProvider with ChangeNotifier {
-  int selectedIndex = 0;
-  String currentBottomTitle = "Donor";
+  int selectedIndex = 2;
+  String currentBottomTitle = "Find";
   bool showAppBar = false;
   String appBarTitle = "";
   DonorPageState? donorPageState = DonorPageState.donor;

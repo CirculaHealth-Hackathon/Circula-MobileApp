@@ -1,3 +1,4 @@
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:circulahealth/api/chat_service.dart';
 import 'package:circulahealth/api/google_sign_in.dart';
 import 'package:circulahealth/api/joke_service.dart';
@@ -5,18 +6,7 @@ import 'package:circulahealth/models/user.dart';
 import 'package:circulahealth/providers/main_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-void main() => runApp(ChatApp());
-
-class ChatApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Chat UI',
-      home: ChatScreen(),
-    );
-  }
-}
+import 'package:profanity_filter/profanity_filter.dart';
 
 class ChatMessage {
   final String text;
@@ -54,7 +44,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
 
   List<dynamic> chatMessages = [];
-
+  final filter = ProfanityFilter();
   final TextEditingController _controller = TextEditingController();
   bool _botTyping = false;
   late ChatService chatService;
@@ -62,10 +52,33 @@ class _ChatScreenState extends State<ChatScreen> {
   late MainProvider _mainProvider;
   UserDetails? userData;
 
+  final List<RegExp> badWordPatterns = [
+    RegExp(r'\bf+u+c+k+\b', caseSensitive: false),
+    RegExp(r'\bf+u+c+k+e+r+\b', caseSensitive: false),
+    RegExp(r'\bs+h+i+t+\b', caseSensitive: false),
+    RegExp(r'\ba+s+s+h*o+l+e+\b', caseSensitive: false),
+    RegExp(r'\bb+i+t+c+h+\b', caseSensitive: false),
+    RegExp(r'\bd+a+m+n+\b', caseSensitive: false),
+    RegExp(r'\bd+a+r+n+\b', caseSensitive: false),
+    RegExp(r'\bp+e+n+i+s+\b', caseSensitive: false),
+    RegExp(r'\bv+a+g+i+n+a+\b', caseSensitive: false),
+    RegExp(r'\bd+i+c+k+\b', caseSensitive: false),
+  ];
+
+  bool containsOffensiveWord(String text) {
+    for (final pattern in badWordPatterns) {
+      if (pattern.hasMatch(text)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _mainProvider = Provider.of<MainProvider>(context, listen: false);
       setState(() {
@@ -78,11 +91,11 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         chatMessages = currentChatMessages;
         _mainProvider.setIsLoading(false);
-        Future.delayed(Duration(milliseconds: 150), () {
+        Future.delayed(const Duration(milliseconds: 150), () {
           if (_scrollController.hasClients) {
             _scrollController.animateTo(
               _scrollController.position.maxScrollExtent,
-              duration: Duration(milliseconds: 300),
+              duration: const Duration(milliseconds: 300),
               curve: Curves.easeIn,
             );
           }
@@ -165,16 +178,187 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  final TextEditingController _textController = TextEditingController();
+
+  void _showInputDialog(BuildContext context) {
+    String? selectedType;
+
+    showDialog(
+      context: context,
+      builder: (secondContext) {
+        return StatefulBuilder(
+          builder: (secondContext, setState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Please Fill In the Details',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal[800],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Text Input
+                      TextField(
+                        controller: _textController,
+                        decoration: InputDecoration(
+                          hintText: "Type your message...",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Radio buttons
+                      Column(
+                        children: [
+                          'Offensive Content',
+                          'Inappropriate',
+                          'Not Useful'
+                        ].map((type) {
+                          return RadioListTile<String>(
+                            title: Text(type),
+                            value: type,
+                            groupValue: selectedType,
+                            onChanged: (value) {
+                              setState(() {
+                                selectedType = value;
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      // Submit Button
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                _textController.clear();
+                                Navigator.of(secondContext)
+                                    .pop(); // Close dialog
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final text = _textController.text.trim();
+
+                                if (text.isEmpty || selectedType == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please fill all fields'),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                try {
+                                  Navigator.of(secondContext)
+                                      .pop(); // Close dialog
+                                  _mainProvider.setIsLoading(true);
+                                  await addReport(_mainProvider.userCredential,
+                                      text, selectedType ?? "");
+                                  _textController.clear();
+                                  _mainProvider.setIsLoading(false);
+                                  AwesomeDialog(
+                                    context: context,
+                                    dialogType: DialogType.success,
+                                    animType: AnimType.scale,
+                                    title: 'Success!',
+                                    desc:
+                                        'Successfully reported! Thank you for helping us!',
+                                    btnOkOnPress: () {},
+                                    btnOkColor: Colors.green,
+                                    headerAnimationLoop: false,
+                                  ).show();
+                                } catch (e) {
+                                  _mainProvider.setIsLoading(false);
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.teal,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              child: const Text(
+                                'Submit',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<MainProvider>(builder: (context, mainProvider, child) {
       return Scaffold(
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           title: const Center(
             child: Text(
               "Circula AI Assistant",
             ),
           ),
+          actions: [
+            PopupMenuButton<String>(
+              onSelected: (String value) {
+                _showInputDialog(context);
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                    value: 'Report', child: const Text('Report'), onTap: () {}),
+              ],
+            )
+          ],
         ),
         body: Column(
           children: [
@@ -246,8 +430,22 @@ class _ChatScreenState extends State<ChatScreen> {
                           horizontal: 20, vertical: 12),
                     ),
                     onPressed: () async {
-                      if (_isLoading) {
+                      if (_isLoading || _controller.text.trim() == "") {
                         return;
+                      }
+                      if (filter.hasProfanity(_controller.text.trim()) ||
+                          containsOffensiveWord(_controller.text.trim())) {
+                        _controller.clear();
+                        return AwesomeDialog(
+                          context: context,
+                          dialogType: DialogType.info,
+                          animType: AnimType.scale,
+                          title: 'Info!',
+                          desc: 'Not allowed to use offensive languages!',
+                          btnOkOnPress: () {},
+                          btnOkColor: Colors.green,
+                          headerAnimationLoop: false,
+                        ).show();
                       }
                       var userMessage = _controller.text.trim();
                       setState(() {

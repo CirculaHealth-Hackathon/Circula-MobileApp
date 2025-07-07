@@ -111,7 +111,7 @@ class _SignInState extends State<SignIn> {
                           controller: _passwordController,
                           obscureText: true,
                           decoration: InputDecoration(
-                            hintText: 'akademi_crypto',
+                            hintText: '*********',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),

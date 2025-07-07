@@ -1,14 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <application
-        android:label="circulahealth"
+        android:label="Circula"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <meta-data 
         android:name="com.google.android.geo.API_KEY"
-        android:value="AIzaSyBR84O9wqhKn8_8GHELgHdkqOckmeNGy40"/>
+        android:value="AIzaSyBPmY_66RaMWaQyvSurpgR8TwUKXEgr2Yc"/>
         <meta-data
         android:name="com.google.android.gms.client_id"
         android:value="500759118187-3f9b8psf1ar7ue6nud5au68havgihdnm.apps.googleusercontent.com" 

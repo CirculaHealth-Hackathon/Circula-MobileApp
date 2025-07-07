@@ -27,6 +27,13 @@ class BottomIcon {
   });
 }
 
+Future<BitmapDescriptor> _loadMarkerIcon(String path) async {
+  return await BitmapDescriptor.asset(
+    const ImageConfiguration(size: Size(48, 48)),
+    path,
+  );
+}
+
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
 
@@ -108,7 +115,7 @@ class _MapPageState extends State<MapPage> {
 
   Future<void> _fitBounds(LatLng userLocation, LatLng destination) async {
     final bounds = _createBounds(userLocation, destination);
-    final cameraUpdate = CameraUpdate.newLatLngBounds(bounds, 40);
+    final cameraUpdate = CameraUpdate.newLatLngBounds(bounds, 150);
 
     // Ensure the map is fully initialized
     await Future.delayed(const Duration(milliseconds: 300));
@@ -146,7 +153,7 @@ class _MapPageState extends State<MapPage> {
   }
 
   Future<List<LatLng>> getRoutePoints(LatLng origin, LatLng destination) async {
-    const apiKey = 'AIzaSyBR84O9wqhKn8_8GHELgHdkqOckmeNGy40';
+    const apiKey = 'AIzaSyBPmY_66RaMWaQyvSurpgR8TwUKXEgr2Yc';
     final url =
         'https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=$apiKey&mode=driving';
 
@@ -194,7 +201,45 @@ class _MapPageState extends State<MapPage> {
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
+    final user1Icon = await _loadMarkerIcon('assets/images/user_icon.png');
+    final currentUserIcon =
+        await _loadMarkerIcon('assets/images/current_user.png');
     setState(() {
+      _markers.add(Marker(
+        markerId: MarkerId('me'),
+        position: LatLng(-6.220000, 106.816666),
+        infoWindow: InfoWindow(title: 'My Location'),
+        icon: user1Icon,
+      ));
+
+      _markers.add(Marker(
+        markerId: MarkerId('you'),
+        position: LatLng(-6.240000, 106.796666),
+        infoWindow: InfoWindow(title: 'My Location'),
+        icon: user1Icon,
+      ));
+
+      _markers.add(Marker(
+        markerId: MarkerId('them'),
+        position: LatLng(-6.230000, 106.806666),
+        infoWindow: InfoWindow(title: 'My Location'),
+        icon: user1Icon,
+      ));
+
+      _markers.add(Marker(
+        markerId: MarkerId('others'),
+        position: LatLng(-6.2100000, 106.799666),
+        infoWindow: InfoWindow(title: 'My Location'),
+        icon: user1Icon,
+      ));
+
+      _markers.add(Marker(
+        markerId: MarkerId("walao_eh"),
+        position: LatLng(-6.26, 106.806077),
+        infoWindow: InfoWindow(title: "Your location"),
+        icon: currentUserIcon,
+      ));
+
       _circles = {
         Circle(
           circleId: const CircleId("user_location"),
@@ -219,7 +264,7 @@ class _MapPageState extends State<MapPage> {
     Donor(),
     Community(),
     const Center(child: Text('AI Help Page')),
-    ChatApp(),
+    ChatScreen(),
     Settings()
   ];
 
@@ -241,19 +286,16 @@ class _MapPageState extends State<MapPage> {
       setState(() {
         isLoading = true;
       });
-      LatLng? currentLocation = await _getCurrentLocation();
-      if (currentLocation != null) {
-        final routePoints =
-            await getRoutePoints(currentLocation, theDestination);
-        _setDestinationMarker(theDestination);
-        _drawRoute(routePoints);
-
-        await _fitBounds(currentLocation, theDestination);
-        setState(() {
-          setZoomLevel();
-          isLoading = false;
-        });
-      }
+      await _getCurrentLocation();
+      final routePoints =
+          await getRoutePoints(const LatLng(-6.26, 106.806077), theDestination);
+      _setDestinationMarker(theDestination);
+      _drawRoute(routePoints);
+      await _fitBounds(const LatLng(-6.26, 106.806077), theDestination);
+      setState(() {
+        setZoomLevel();
+        isLoading = false;
+      });
     } catch (e) {
       print(e);
     }
@@ -288,6 +330,9 @@ class _MapPageState extends State<MapPage> {
                         onMapCreated: (GoogleMapController controller) async {
                           setState(() {
                             _controller = controller;
+                            _polylines.clear();
+                            _markers.clear();
+                            _showRouteToDestination();
                           });
                         },
                         markers: _markers,
